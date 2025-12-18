@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Viwa Marines Booking</title>
+    <style>
+        :root { --marine-blue: #0077be; --dark-blue: #003366; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f0f4f8; margin: 0; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        .input-panel { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 100%; max-width: 550px; border-top: 6px solid var(--marine-blue); margin-bottom: 30px; }
+        label { font-weight: bold; font-size: 14px; color: #444; display: block; margin-top: 12px; }
+        input, select { width: 100%; padding: 12px; margin-top: 5px; border: 1px solid #ccd6e0; border-radius: 8px; font-size: 16px; box-sizing: border-box; }
+        .btn-print { width: 100%; padding: 18px; background: #28a745; color: white; border: none; border-radius: 10px; font-weight: bold; font-size: 18px; cursor: pointer; margin-top: 20px; }
+
+        /* Receipt Design */
+        #bill-template { background: white; padding: 40px; width: 750px; border: 1px solid #d1d9e0; position: relative; }
+        .bill-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 4px solid var(--marine-blue); padding-bottom: 20px; margin-bottom: 30px; }
+        .logo-img { width: 240px; height: auto; }
+        
+        .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .info-card { background: #f8fbff; border: 1px solid #e1e8f0; padding: 15px; border-radius: 10px; }
+        .info-label { font-size: 12px; color: var(--marine-blue); font-weight: 800; text-transform: uppercase; }
+        .info-value { font-size: 18px; font-weight: bold; color: #000; display: block; margin-top: 6px; }
+
+        .payment-banner { margin-top: 30px; background: #f2f2f2; display: flex; border-radius: 12px; border: 1px solid #ccc; }
+        .pay-col { flex: 1; padding: 20px; text-align: center; }
+        .pay-label { color: #333; font-size: 13px; font-weight: bold; text-transform: uppercase; margin-bottom: 8px; display: block; }
+        .pay-amount { font-size: 28px; font-weight: 800; color: #000; display: block; }
+
+        /* Grand Total Section */
+        .total-summary { text-align: right; margin: 30px 0; padding-right: 10px; }
+        .total-text { font-size: 20px; font-weight: bold; color: #000; border-bottom: 2px solid #000; display: inline-block; padding-bottom: 5px; }
+
+        .footer-note { margin-top: 20px; text-align: center; border-top: 1px solid #eee; padding-top: 20px; color: #000; font-size: 14px; }
+
+        @media print {
+            .input-panel { display: none; }
+            body { background: white; padding: 0; }
+            #bill-template { border: none; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="input-panel">
+    <h2>Viwa Marines Admin</h2>
+    <label>Date</label><input type="date" id="date" oninput="sync()">
+    <label>From (Pickup)</label>
+    <select id="pickup" onchange="autoRoute('pickup')">
+        <option value="Alibag Mandwa Jetty">Alibag Mandwa Jetty</option>
+        <option value="Gateway of India Mumbai">Gateway of India Mumbai</option>
+    </select>
+    <label>To (Destination)</label>
+    <select id="destination" onchange="autoRoute('destination')">
+        <option value="Gateway of India Mumbai">Gateway of India Mumbai</option>
+        <option value="Alibag Mandwa Jetty">Alibag Mandwa Jetty</option>
+    </select>
+    <label>Passengers</label><input type="number" id="pass" oninput="sync()">
+    <label>Pickup Time</label><input type="time" id="time" oninput="sync()">
+    
+    <div style="display: flex; gap: 15px;">
+        <div style="flex: 1;"><label>Advance Paid (₹)</label><input type="number" id="paid" oninput="sync()"></div>
+        <div style="flex: 1;"><label>Payment Pending (₹)</label><input type="number" id="pend" oninput="sync()"></div>
+    </div>
+    
+    <button class="btn-print" onclick="window.print()">PRINT / SAVE AS PDF</button>
+</div>
+
+<div id="bill-template">
+    <div class="bill-header">
+        <img src="Viwa marines.jpeg" class="logo-img">
+        <div style="text-align: right;">
+            <h1 style="margin:0; color: var(--dark-blue); font-size: 30px;">BOOKING RECEIPT</h1>
+            <p id="view-date" style="font-size: 18px; color: #000; font-weight: bold; margin-top: 8px;">Date: --/--/----</p>
+        </div>
+    </div>
+
+    <div class="info-grid">
+        <div class="info-card"><span class="info-label">Pickup Location</span><span class="info-value" id="v-from">Alibag Mandwa Jetty</span></div>
+        <div class="info-card"><span class="info-label">Destination</span><span class="info-value" id="v-to">Gateway of India Mumbai</span></div>
+        <div class="info-card"><span class="info-label">Passengers</span><span class="info-value" id="v-pass">0</span></div>
+        <div class="info-card"><span class="info-label">Pickup Time</span><span class="info-value" id="v-time">--:-- --</span></div>
+    </div>
+
+    <div class="payment-banner">
+        <div class="pay-col"><span class="pay-label">Advance Paid</span><span class="pay-amount" id="v-paid">₹0</span></div>
+        <div class="pay-col" style="border-left: 1px solid #ccc;"><span class="pay-label">Payment Pending</span><span class="pay-amount" id="v-pend">₹0</span></div>
+    </div>
+
+    <div class="total-summary">
+        <span class="total-text">Grand Total: <span id="v-total">₹0</span></span>
+    </div>
+
+    <div class="footer-note">
+        <p><strong>Support: +91 98209 68547</strong></p>
+        <p>Viwa Marines - Fastest Rides | Alibag &bull; Mumbai</p>
+    </div>
+</div>
+
+<script>
+    function format12Hour(timeStr) {
+        if (!timeStr) return "--:-- --";
+        let [hours, minutes] = timeStr.split(':');
+        let ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = hours % 12 || 12;
+        return `${hours}:${minutes} ${ampm}`;
+    }
+
+    function autoRoute(origin) {
+        const p = document.getElementById('pickup'), d = document.getElementById('destination');
+        const m = "Alibag Mandwa Jetty", g = "Gateway of India Mumbai";
+        if (origin === 'pickup') d.value = (p.value === m) ? g : m;
+        else p.value = (d.value === m) ? g : m;
+        sync();
+    }
+
+    function sync() {
+        const paidVal = parseFloat(document.getElementById('paid').value) || 0;
+        const pendVal = parseFloat(document.getElementById('pend').value) || 0;
+
+        document.getElementById('view-date').innerText = "Date: " + (document.getElementById('date').value || "--/--/----");
+        document.getElementById('v-from').innerText = document.getElementById('pickup').value;
+        document.getElementById('v-to').innerText = document.getElementById('destination').value;
+        document.getElementById('v-pass').innerText = document.getElementById('pass').value || "0";
+        document.getElementById('v-time').innerText = format12Hour(document.getElementById('time').value);
+        document.getElementById('v-paid').innerText = "₹" + paidVal;
+        document.getElementById('v-pend').innerText = "₹" + pendVal;
+        document.getElementById('v-total').innerText = "₹" + (paidVal + pendVal);
+    }
+    sync();
+</script>
+
+</body>
+</html>
